@@ -9,11 +9,13 @@ from utils.tb_logger import *
 from utils.loggers import *
 from utils.loggers import CsvLogger
 from argparse import Namespace
+from utils.distill import class_logits_from_subclass_logits
 from models.utils.continual_model import ContinualModel
 from datasets.utils.continual_dataset import ContinualDataset
 from typing import Tuple
 from datasets import get_dataset
 import sys
+
 
 def mask_classes(outputs: torch.Tensor, dataset: ContinualDataset, k: int) -> None:
     """
@@ -53,6 +55,7 @@ def evaluate(model: ContinualModel, dataset: ContinualDataset, last=False) -> Tu
                 else:
                     outputs = model(inputs)
 
+                outputs = class_logits_from_subclass_logits(outputs,dataset.N_CLASSES_PER_TASK*dataset.N_TASKS)
                 _, pred = torch.max(outputs.data, 1)
                 correct += torch.sum(pred == labels).item()
                 total += labels.shape[0]
@@ -94,6 +97,7 @@ def train(model: ContinualModel, dataset: ContinualDataset,
         random_results_class, random_results_task = evaluate(model, dataset_copy)
 
     print(file=sys.stderr)
+    num_classes = dataset.N_CLASSES_PER_TASK * dataset.N_TASKS
     for t in range(dataset.N_TASKS):
         model.net.train()
         train_loader, test_loader = dataset.get_data_loaders()
@@ -101,9 +105,9 @@ def train(model: ContinualModel, dataset: ContinualDataset,
             model.begin_task(dataset)
         if t:
             accs = evaluate(model, dataset, last=True)
-            results[t-1] = results[t-1] + accs[0]
+            results[t - 1] = results[t - 1] + accs[0]
             if dataset.SETTING == 'class-il':
-                results_mask_classes[t-1] = results_mask_classes[t-1] + accs[1]
+                results_mask_classes[t - 1] = results_mask_classes[t - 1] + accs[1]
 
         scheduler = dataset.get_scheduler(model, args)
         for epoch in range(model.args.n_epochs):
@@ -114,13 +118,13 @@ def train(model: ContinualModel, dataset: ContinualDataset,
                     labels = labels.to(model.device)
                     not_aug_inputs = not_aug_inputs.to(model.device)
                     logits = logits.to(model.device)
-                    loss = model.observe(inputs, labels, not_aug_inputs, logits)
+                    loss = model.observe(inputs, labels, not_aug_inputs, logits,num_classes)
                 else:
                     inputs, labels, not_aug_inputs = data
                     inputs, labels = inputs.to(model.device), labels.to(
                         model.device)
                     not_aug_inputs = not_aug_inputs.to(model.device)
-                    loss = model.observe(inputs, labels, not_aug_inputs)
+                    loss = model.observe(inputs, labels, not_aug_inputs,num_classes)
 
                 progress_bar(i, len(train_loader), epoch, t, loss)
 
@@ -156,3 +160,5 @@ def train(model: ContinualModel, dataset: ContinualDataset,
         tb_logger.close()
     if args.csv_log:
         csv_logger.write(vars(args))
+
+    torch.save(model.state_dict(), f"data/saved_model/{args.dataset[4:]}/model.pth.tar")

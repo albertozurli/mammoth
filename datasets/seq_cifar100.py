@@ -62,6 +62,7 @@ class SequentialCIFAR100(ContinualDataset):
     NAME = 'seq-cifar100'
     SETTING = 'class-il'
     N_CLASSES_PER_TASK = 10
+    N_SUBCLASSES_PER_CLASS = 5
     N_TASKS = 10
     TRANSFORM = transforms.Compose(
             [transforms.RandomCrop(32, padding=4),
@@ -103,7 +104,7 @@ class SequentialCIFAR100(ContinualDataset):
     @staticmethod
     def get_backbone():
         return resnet18(SequentialCIFAR100.N_CLASSES_PER_TASK
-                        * SequentialCIFAR100.N_TASKS)
+                        * SequentialCIFAR100.N_TASKS * SequentialCIFAR100.N_SUBCLASSES_PER_CLASS)
 
     @staticmethod
     def get_loss():
@@ -121,17 +122,6 @@ class SequentialCIFAR100(ContinualDataset):
                                 (0.2675, 0.2565, 0.2761))
         return transform
 
-    @staticmethod
-    def get_epochs():
-        return 50
-
-    @staticmethod
-    def get_batch_size():
-        return 32
-
-    @staticmethod
-    def get_minibatch_size():
-        return SequentialCIFAR100.get_batch_size()
 
     @staticmethod
     def get_scheduler(model, args) -> torch.optim.lr_scheduler:

@@ -30,7 +30,7 @@ def add_experiment_args(parser: ArgumentParser) -> None:
                         help='optimizer nesterov momentum.')    
 
     parser.add_argument('--n_epochs', type=int,
-                        help='Batch size.')
+                        help='The number of training steps for each task.')
     parser.add_argument('--batch_size', type=int,
                         help='Batch size.')
 

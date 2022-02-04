@@ -7,7 +7,7 @@ from torchvision.datasets import CIFAR10
 import torchvision.transforms as transforms
 from backbone.ResNet18 import resnet18
 import torch.nn.functional as F
-from datasets.seq_tinyimagenet import base_path
+from utils.conf import base_path
 from PIL import Image
 from datasets.utils.validation import get_train_val
 from datasets.utils.continual_dataset import ContinualDataset, store_masked_loaders
@@ -54,6 +54,7 @@ class SequentialCIFAR10(ContinualDataset):
     NAME = 'seq-cifar10'
     SETTING = 'class-il'
     N_CLASSES_PER_TASK = 2
+    N_SUBCLASSES_PER_CLASS = 5
     N_TASKS = 5
     TRANSFORM = transforms.Compose(
             [transforms.RandomCrop(32, padding=4),
@@ -89,7 +90,7 @@ class SequentialCIFAR10(ContinualDataset):
     @staticmethod
     def get_backbone():
         return resnet18(SequentialCIFAR10.N_CLASSES_PER_TASK
-                        * SequentialCIFAR10.N_TASKS)
+                        * SequentialCIFAR10.N_TASKS * SequentialCIFAR10.N_SUBCLASSES_PER_CLASS)
 
     @staticmethod
     def get_loss():

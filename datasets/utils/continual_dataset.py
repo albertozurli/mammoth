@@ -90,19 +90,6 @@ class ContinualDataset:
         """
         pass
 
-    @staticmethod
-    def get_epochs():
-        pass
-
-    @staticmethod
-    def get_batch_size():
-        pass
-
-    @staticmethod
-    def get_minibatch_size():
-        pass
-
-
 
 def store_masked_loaders(train_dataset: datasets, test_dataset: datasets,
                     setting: ContinualDataset) -> Tuple[DataLoader, DataLoader]:

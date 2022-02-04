@@ -3,11 +3,12 @@
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
 
-import numpy # needed (don't change it)
+import numpy  # needed (don't change it)
 import importlib
 import os
 import sys
 import socket
+
 mammoth_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(mammoth_path)
 sys.path.append(mammoth_path + '/datasets')
@@ -30,12 +31,51 @@ import torch
 import uuid
 import datetime
 
+
+def top5_examples(model, dataset, path):
+    # Load model + initialize 20 list of tuples( one for each superclass)
+    model.load_state_dict(torch.load(path))
+    model.to(model.device)
+    tuple_list = [[] for i in range(20)]
+    tmp = (0, 0)
+    for s in tuple_list:
+        for i in range(5):
+            s.append(tmp)
+
+    with torch.no_grad():
+        for t in range(dataset.N_TASKS):
+            _, test_loader = dataset.get_data_loaders()
+            for i, data in enumerate(tqdm(test_loader)):
+                inputs, _ = data
+                inputs = inputs.to(model.device)
+                outputs = model(inputs)
+                class_outputs = class_logits_from_subclass_logits(outputs, 20)
+                for n, logit_tensor in enumerate(class_outputs):
+                    val, idx = torch.max(logit_tensor, 0)
+                    val, idx = val.item(), idx.item()
+                    if tuple_list[idx][-1][1] < val:
+                        tuple_list[idx][-1] = (inputs[n], val)
+                        tuple_list[idx].sort(key=lambda tup: tup[1], reverse=True)
+
+    plt.figure(figsize=(50, 50))
+    for list_idx in range(20):
+        for img_idx in range(5):
+            img = tuple_list[list_idx][img_idx][0].cpu().numpy()
+            plt.subplot(20, 5, 5 * list_idx + img_idx + 1)
+            plt.axis('off')
+            plt.imshow(np.transpose(img, (1, 2, 0)))
+    plt.tight_layout()
+    plt.savefig('activation_superclasses.png')
+    plt.show()
+
+
 def lecun_fix():
     # Yann moved his website to CloudFlare. You need this now
     from six.moves import urllib
     opener = urllib.request.build_opener()
     opener.addheaders = [('User-agent', 'Mozilla/5.0')]
     urllib.request.install_opener(opener)
+
 
 def parse_args():
     parser = ArgumentParser(description='mammoth', allow_abbrev=False)
@@ -82,36 +122,31 @@ def parse_args():
 
     return args
 
+
 def main(args=None):
     lecun_fix()
     if args is None:
-        args = parse_args()    
-    
-    # Add uuid, timestamp and hostname for logging
+        args = parse_args()
+
+        # Add uuid, timestamp and hostname for logging
     args.conf_jobnum = str(uuid.uuid4())
     args.conf_timestamp = str(datetime.datetime.now())
     args.conf_host = socket.gethostname()
     dataset = get_dataset(args)
 
-    if args.n_epochs is None and isinstance(dataset, ContinualDataset):
-        args.n_epochs = dataset.get_epochs()
-    if args.batch_size is None:
-        args.batch_size = dataset.get_batch_size()
-    if hasattr(importlib.import_module('models.' + args.model), 'Buffer') and args.minibatch_size is None:
-        args.minibatch_size = dataset.get_minibatch_size()
-
     backbone = dataset.get_backbone()
     loss = dataset.get_loss()
     model = get_model(args, backbone, loss, dataset.get_transform())
-    
+
     # set job name
-    setproctitle.setproctitle('{}_{}_{}'.format(args.model, args.buffer_size if 'buffer_size' in args else 0, args.dataset))     
+    setproctitle.setproctitle(
+        '{}_{}_{}'.format(args.model, args.buffer_size if 'buffer_size' in args else 0, args.dataset))
 
     if isinstance(dataset, ContinualDataset):
         train(model, dataset, args)
-    else:
-        assert not hasattr(model, 'end_task') or model.NAME == 'joint_gcl'
-        ctrain(args)
+
+    # model_path = f"data/saved_model/{args.dataset[4:]}/model.pth.tar"
+    # top5_examples(model, dataset, model_path)
 
 
 if __name__ == '__main__':
