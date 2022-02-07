@@ -34,6 +34,7 @@ def add_experiment_args(parser: ArgumentParser) -> None:
     parser.add_argument('--batch_size', type=int,
                         help='Batch size.')
 
+
 def add_management_args(parser: ArgumentParser) -> None:
     parser.add_argument('--seed', type=int, default=None,
                         help='The random seed.')
@@ -47,6 +48,8 @@ def add_management_args(parser: ArgumentParser) -> None:
                         help='Enable tensorboard logging')
     parser.add_argument('--validation', action='store_true',
                         help='Test on the validation set')
+    parser.add_argument('--subclass', action='store_true',
+                        help='Train with subclass distillation.')
 
 
 def add_rehearsal_args(parser: ArgumentParser) -> None:

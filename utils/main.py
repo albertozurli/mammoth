@@ -134,7 +134,7 @@ def main(args=None):
     args.conf_host = socket.gethostname()
     dataset = get_dataset(args)
 
-    backbone = dataset.get_backbone()
+    backbone = dataset.get_backbone(args.subclass)
     loss = dataset.get_loss()
     model = get_model(args, backbone, loss, dataset.get_transform())
 

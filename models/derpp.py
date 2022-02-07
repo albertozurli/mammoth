@@ -6,6 +6,7 @@
 from utils.buffer import Buffer
 from torch.nn import functional as F
 from models.utils.continual_model import ContinualModel
+from utils.distill import class_logits_from_subclass_logits
 from utils.args import *
 
 
@@ -31,11 +32,12 @@ class Derpp(ContinualModel):
 
         self.buffer = Buffer(self.args.buffer_size, self.device)
 
-    def observe(self, inputs, labels, not_aug_inputs):
+    def observe(self, inputs, labels, not_aug_inputs,num_classes):
 
         self.opt.zero_grad()
         outputs = self.net(inputs)
-        loss = self.loss(outputs, labels)
+        class_outputs = class_logits_from_subclass_logits(outputs, num_classes)
+        loss = self.loss(class_outputs, labels)
 
         if not self.buffer.is_empty():
             buf_inputs, _, buf_logits = self.buffer.get_data(
@@ -46,7 +48,8 @@ class Derpp(ContinualModel):
             buf_inputs, buf_labels, _ = self.buffer.get_data(
                 self.args.minibatch_size, transform=self.transform)
             buf_outputs = self.net(buf_inputs)
-            loss += self.args.beta * self.loss(buf_outputs, buf_labels)
+            buf_class = class_logits_from_subclass_logits(buf_outputs, num_classes)
+            loss += self.args.beta * self.loss(buf_class, buf_labels)
 
         loss.backward()
         self.opt.step()

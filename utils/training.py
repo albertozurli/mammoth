@@ -84,6 +84,8 @@ def train(model: ContinualModel, dataset: ContinualDataset,
     model.net.to(model.device)
     results, results_mask_classes = [], []
 
+    # torch.save(model.state_dict(), f"data/saved_model/{args.dataset[4:]}/model.pth.tar")
+
     if args.csv_log:
         csv_logger = CsvLogger(dataset.SETTING, dataset.NAME, model.NAME)
     if args.tensorboard:
@@ -161,4 +163,4 @@ def train(model: ContinualModel, dataset: ContinualDataset,
     if args.csv_log:
         csv_logger.write(vars(args))
 
-    torch.save(model.state_dict(), f"data/saved_model/{args.dataset[4:]}/model.pth.tar")
+    # torch.save(model.state_dict(), f"data/saved_model/{args.dataset[4:]}/model.pth.tar")
