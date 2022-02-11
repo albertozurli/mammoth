@@ -6,7 +6,7 @@
 from utils.buffer import Buffer
 from torch.nn import functional as F
 from utils.args import *
-from utils.distill import class_logits_from_subclass_logits
+from utils.distill import class_logits_from_subclass_logits,aux_loss
 from models.utils.continual_model import ContinualModel
 
 
@@ -34,7 +34,11 @@ class Der(ContinualModel):
 
         outputs = self.net(inputs)
         class_outputs = class_logits_from_subclass_logits(outputs, num_classes)
-        loss = self.loss(class_outputs, labels)
+        auxiliary = aux_loss(outputs, self.device)
+        if self.args.aux:
+            loss = self.loss(class_outputs, labels) + self.args.aux_weight * auxiliary.squeeze()
+        else:
+            loss = self.loss(class_outputs, labels)
 
         if not self.buffer.is_empty():
             buf_inputs, buf_logits = self.buffer.get_data(

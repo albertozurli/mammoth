@@ -32,43 +32,6 @@ import uuid
 import datetime
 
 
-def top5_examples(model, dataset, path):
-    # Load model + initialize 20 list of tuples( one for each superclass)
-    model.load_state_dict(torch.load(path))
-    model.to(model.device)
-    tuple_list = [[] for i in range(20)]
-    tmp = (0, 0)
-    for s in tuple_list:
-        for i in range(5):
-            s.append(tmp)
-
-    with torch.no_grad():
-        for t in range(dataset.N_TASKS):
-            _, test_loader = dataset.get_data_loaders()
-            for i, data in enumerate(tqdm(test_loader)):
-                inputs, _ = data
-                inputs = inputs.to(model.device)
-                outputs = model(inputs)
-                class_outputs = class_logits_from_subclass_logits(outputs, 20)
-                for n, logit_tensor in enumerate(class_outputs):
-                    val, idx = torch.max(logit_tensor, 0)
-                    val, idx = val.item(), idx.item()
-                    if tuple_list[idx][-1][1] < val:
-                        tuple_list[idx][-1] = (inputs[n], val)
-                        tuple_list[idx].sort(key=lambda tup: tup[1], reverse=True)
-
-    plt.figure(figsize=(50, 50))
-    for list_idx in range(20):
-        for img_idx in range(5):
-            img = tuple_list[list_idx][img_idx][0].cpu().numpy()
-            plt.subplot(20, 5, 5 * list_idx + img_idx + 1)
-            plt.axis('off')
-            plt.imshow(np.transpose(img, (1, 2, 0)))
-    plt.tight_layout()
-    plt.savefig('activation_superclasses.png')
-    plt.show()
-
-
 def lecun_fix():
     # Yann moved his website to CloudFlare. You need this now
     from six.moves import urllib
@@ -111,7 +74,7 @@ def parse_args():
         to_parse.remove('--load_best_args')
         args = parser.parse_args(to_parse)
         if args.model == 'joint' and args.dataset == 'mnist-360':
-            args.model = 'joint_gcl'        
+            args.model = 'joint_gcl'
     else:
         get_parser = getattr(mod, 'get_parser')
         parser = get_parser()

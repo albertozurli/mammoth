@@ -20,12 +20,12 @@ def get_parser() -> ArgumentParser:
     return parser
 
 
-class DerppACE(ContinualModel):
-    NAME = 'derpp_ace'
+class ErACE(ContinualModel):
+    NAME = 'er_ace'
     COMPATIBILITY = ['class-il', 'task-il']
 
     def __init__(self, backbone, loss, args, transform):
-        super(DerppACE, self).__init__(backbone, loss, args, transform)
+        super(ErACE, self).__init__(backbone, loss, args, transform)
         self.buffer = Buffer(self.args.buffer_size, self.device)
         self.seen_so_far = torch.tensor([]).long().to(self.device)
         self.num_classes = get_dataset(args).N_TASKS * get_dataset(args).N_CLASSES_PER_TASK
@@ -34,7 +34,7 @@ class DerppACE(ContinualModel):
     def end_task(self, dataset):
         self.task += 1
 
-    def observe(self, inputs, labels, not_aug_inputs,n):
+    def observe(self, inputs, labels, not_aug_inputs, n):
 
         present = labels.unique()
         self.seen_so_far = torch.cat([self.seen_so_far, present]).unique()

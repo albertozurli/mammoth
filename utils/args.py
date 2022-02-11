@@ -50,6 +50,10 @@ def add_management_args(parser: ArgumentParser) -> None:
                         help='Test on the validation set')
     parser.add_argument('--subclass', action='store_true',
                         help='Train with subclass distillation.')
+    parser.add_argument('--aux', action='store_true',
+                        help='Use aux loss during training')
+    parser.add_argument('--aux_weight',type=float,default=0.1,
+                        help='Weight of aux loss.')
 
 
 def add_rehearsal_args(parser: ArgumentParser) -> None:
