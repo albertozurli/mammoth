@@ -4,10 +4,12 @@
 # LICENSE file in the root directory of this source tree.
 
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
 from utils.buffer import Buffer
 from utils.args import *
 from models.utils.continual_model import ContinualModel
+from utils.distill import class_logits_from_subclass_logits, aux_loss
 from datasets import get_dataset
 
 
@@ -17,6 +19,10 @@ def get_parser() -> ArgumentParser:
     add_management_args(parser)
     add_experiment_args(parser)
     add_rehearsal_args(parser)
+    parser.add_argument('--alpha', type=float, required=True,
+                        help='Penalty weight.')
+    parser.add_argument('--beta', type=float, required=True,
+                        help='Penalty weight.')
     return parser
 
 
@@ -40,7 +46,8 @@ class DerppACE(ContinualModel):
         self.seen_so_far = torch.cat([self.seen_so_far, present]).unique()
 
         logits = self.net(inputs)
-        mask = torch.zeros_like(logits)
+        class_logits = class_logits_from_subclass_logits(logits,self.num_classes)
+        mask = torch.zeros_like(class_logits)
         mask[:, present] = 1
 
         self.opt.zero_grad()
@@ -48,23 +55,37 @@ class DerppACE(ContinualModel):
             mask[:, self.seen_so_far.max():] = 1
 
         if self.task > 0:
-            logits = logits.masked_fill(mask == 0, torch.finfo(logits.dtype).min)
+            masked_logits = class_logits.masked_fill(mask == 0, torch.finfo(class_logits.dtype).min)
+            loss = self.loss(masked_logits, labels)
+        else:
+            loss = self.loss(class_logits, labels)
 
-        loss = self.loss(logits, labels)
+        if self.args.aux:
+            auxiliary = aux_loss(logits,self.device)
+            loss += (self.args.aux_weight * auxiliary.squeeze())
+
         loss_re = torch.tensor(0.)
+        loss_mse = torch.tensor(0.)
 
         if self.task > 0:
             # sample from buffer
-            buf_inputs, buf_labels = self.buffer.get_data(
+            buf_inputs, buf_labels, _ = self.buffer.get_data(
                 self.args.minibatch_size, transform=self.transform)
-            loss_re = self.loss(self.net(buf_inputs), buf_labels)
+            buf_outputs = self.net(buf_inputs)
+            loss_re = self.args.alpha * F.cross_entropy(buf_outputs,buf_labels)
 
-        loss += loss_re
+            buf_inputs, _, buf_logits = self.buffer.get_data(
+                self.args.minibatch_size, transform=self.transform)
+            buf_outputs = self.net(buf_inputs)
+            loss_mse = self.args.beta * F.mse_loss(buf_outputs, buf_logits)
 
+        loss = loss + loss_re + loss_mse
         loss.backward()
+
         self.opt.step()
 
         self.buffer.add_data(examples=not_aug_inputs,
-                             labels=labels)
+                             labels=labels,
+                             logits=logits.data)
 
         return loss.item()

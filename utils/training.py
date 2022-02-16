@@ -55,7 +55,7 @@ def evaluate(model: ContinualModel, dataset: ContinualDataset, last=False) -> Tu
                 else:
                     outputs = model(inputs)
 
-                outputs = class_logits_from_subclass_logits(outputs,dataset.N_CLASSES_PER_TASK*dataset.N_TASKS)
+                outputs = class_logits_from_subclass_logits(outputs, dataset.N_CLASSES_PER_TASK * dataset.N_TASKS)
                 _, pred = torch.max(outputs.data, 1)
                 correct += torch.sum(pred == labels).item()
                 total += labels.shape[0]
@@ -85,6 +85,8 @@ def train(model: ContinualModel, dataset: ContinualDataset,
     results, results_mask_classes = [], []
 
     # torch.save(model.state_dict(), f"data/saved_model/{args.dataset[4:]}/model.pth.tar")
+    print(f"data/saved_model/{getattr(args, 'dataset')[4:]}/{getattr(args, 'model')}/model.pth.tar")
+
 
     if args.csv_log:
         csv_logger = CsvLogger(dataset.SETTING, dataset.NAME, model.NAME)
@@ -120,19 +122,19 @@ def train(model: ContinualModel, dataset: ContinualDataset,
                     labels = labels.to(model.device)
                     not_aug_inputs = not_aug_inputs.to(model.device)
                     logits = logits.to(model.device)
-                    loss = model.observe(inputs, labels, not_aug_inputs, logits,num_classes)
+                    loss = model.observe(inputs, labels, not_aug_inputs, logits, num_classes)
                 else:
                     inputs, labels, not_aug_inputs = data
                     inputs, labels = inputs.to(model.device), labels.to(
                         model.device)
                     not_aug_inputs = not_aug_inputs.to(model.device)
-                    loss = model.observe(inputs, labels, not_aug_inputs,num_classes)
+                    loss = model.observe(inputs, labels, not_aug_inputs, num_classes)
 
                 progress_bar(i, len(train_loader), epoch, t, loss)
 
                 if args.tensorboard:
                     tb_logger.log_loss(loss, args, epoch, t, i)
-            
+
             if scheduler is not None:
                 scheduler.step()
 
@@ -163,4 +165,5 @@ def train(model: ContinualModel, dataset: ContinualDataset,
     if args.csv_log:
         csv_logger.write(vars(args))
 
-    # torch.save(model.state_dict(), f"data/saved_model/{args.dataset[4:]}/model.pth.tar")
+    torch.save(model.state_dict(),
+               f"data/saved_model/{getattr(args, 'dataset')}/{getattr(args, 'model')}/model.pth.tar")

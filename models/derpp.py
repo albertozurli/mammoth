@@ -37,8 +37,8 @@ class Derpp(ContinualModel):
         self.opt.zero_grad()
         outputs = self.net(inputs)
         class_outputs = class_logits_from_subclass_logits(outputs, num_classes)
-        auxiliary = aux_loss(outputs, self.device)
         if self.args.aux:
+            auxiliary = aux_loss(outputs, self.device)
             loss = self.loss(class_outputs, labels) + self.args.aux_weight * auxiliary.squeeze()
         else:
             loss = self.loss(class_outputs, labels)

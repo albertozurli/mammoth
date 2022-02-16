@@ -172,8 +172,6 @@ class Buffer:
         else:
             return (torch.tensor(choice).to(self.device), ) + ret_tuple
 
-        return ret_tuple
-
     def get_data_by_index(self, indexes, transform: transforms=None) -> Tuple:
         """
         Returns the data by the given index.
