@@ -72,12 +72,12 @@ class DerppACE(ContinualModel):
             buf_inputs, buf_labels, _ = self.buffer.get_data(
                 self.args.minibatch_size, transform=self.transform)
             buf_outputs = self.net(buf_inputs)
-            loss_re = self.args.alpha * F.cross_entropy(buf_outputs,buf_labels)
+            loss_re = self.args.beta * F.cross_entropy(buf_outputs,buf_labels)
 
             buf_inputs, _, buf_logits = self.buffer.get_data(
                 self.args.minibatch_size, transform=self.transform)
             buf_outputs = self.net(buf_inputs)
-            loss_mse = self.args.beta * F.mse_loss(buf_outputs, buf_logits)
+            loss_mse = self.args.alpha * F.mse_loss(buf_outputs, buf_logits)
 
         loss = loss + loss_re + loss_mse
         loss.backward()

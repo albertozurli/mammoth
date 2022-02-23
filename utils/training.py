@@ -84,7 +84,9 @@ def train(model: ContinualModel, dataset: ContinualDataset,
     model.net.to(model.device)
     results, results_mask_classes = [], []
 
-    print(f"Model will be saved at: data/saved_model/{getattr(args, 'dataset')[4:]}/{getattr(args, 'model')}/model.pth.tar")
+    print(f"Model will be saved at: data/saved_model/{getattr(args, 'dataset')[4:]}/{getattr(args, 'model')}")
+    dataset_name = getattr(args, 'dataset')[4:]
+    model_name = getattr(args, 'model')
 
     if args.csv_log:
         csv_logger = CsvLogger(dataset.SETTING, dataset.NAME, model.NAME)
@@ -166,10 +168,10 @@ def train(model: ContinualModel, dataset: ContinualDataset,
     if args.subclass:
         if args.aux:
             torch.save(model.state_dict(),
-                       f"data/saved_model/{getattr(args, 'dataset')[4:]}/{getattr(args, 'model')}/model_sub_aux.pth.tar")
+                       f"data/saved_model/{dataset_name}/{model_name}/model_sub_aux.pth.tar")
         else:
             torch.save(model.state_dict(),
-                       f"data/saved_model/{getattr(args, 'dataset')[4:]}/{getattr(args, 'model')}/model_sub.pth.tar")
+                       f"data/saved_model/{dataset_name}/{model_name}/model_sub.pth.tar")
     else:
         torch.save(model.state_dict(),
-                   f"data/saved_model/{getattr(args, 'dataset')[4:]}/{getattr(args, 'model')}/model.pth.tar")
+                   f"data/saved_model/{dataset_name}/{model_name}/model.pth.tar")
