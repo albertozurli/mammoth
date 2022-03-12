@@ -36,28 +36,29 @@ class DerppACE(ContinualModel):
         self.num_classes = get_dataset(args).N_TASKS * get_dataset(args).N_CLASSES_PER_TASK
         self.task = 0
         self.cpt = get_dataset(args).N_CLASSES_PER_TASK
+        self.spt = get_dataset(args).N_SUBCLASSES_PER_CLASS
 
     def end_task(self, dataset):
         self.task += 1
 
     def observe(self, inputs, labels, not_aug_inputs,n):
 
-        logits = self.net(inputs)
-        logits_mapped = logits[:, self.task * self.cpt:(self.task + 1) * self.cpt]
+        output = self.net(inputs)
+
+        if self.args.subclass:
+            output_mapped = class_logits_from_subclass_logits(output,self.num_classes)
+            output_mapped = output_mapped[:, self.task * self.cpt:(self.task + 1) * self.cpt]
+        else:
+            output_mapped = output[:, self.task * self.cpt:(self.task + 1) * self.cpt]
+
         labels_mapped = torch.remainder(labels, self.cpt)
 
         self.opt.zero_grad()
-        loss = self.loss(logits_mapped, labels_mapped)
+        loss = self.loss(output_mapped, labels_mapped)
 
-        # if self.task > 0:
-        #     masked_logits = class_logits.masked_fill(mask == 0, torch.finfo(class_logits.dtype).min)
-        #     loss = self.loss(masked_logits, labels)
-        # else:
-        #     loss = self.loss(class_logits, labels)
-
-        # if self.args.aux:
-        #     auxiliary = aux_loss(logits,self.device)
-        #     loss += (self.args.aux_weight * auxiliary.squeeze())
+        if self.args.aux:
+            auxiliary = aux_loss(output, self.device)
+            loss += (self.args.aux_weight * auxiliary.squeeze())
 
         loss_re = torch.tensor(0.)
         loss_mse = torch.tensor(0.)
@@ -82,6 +83,6 @@ class DerppACE(ContinualModel):
 
         self.buffer.add_data(examples=not_aug_inputs,
                              labels=labels,
-                             logits=logits.data)
+                             logits=output.data)
 
         return loss.item()
