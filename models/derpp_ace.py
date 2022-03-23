@@ -57,7 +57,7 @@ class DerppACE(ContinualModel):
         loss = self.loss(output_mapped, labels_mapped)
 
         if self.args.aux:
-            auxiliary = aux_loss(output, self.device)
+            # auxiliary = aux_loss(output, self.device)
             auxiliary = aux_loss(output[:, self.task * self.cpt*self.spc:(self.task + 1) * self.cpt*self.spc], self.device)
             loss += (self.args.aux_weight * auxiliary.squeeze())
 
