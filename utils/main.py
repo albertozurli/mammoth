@@ -20,7 +20,6 @@ from models import get_all_models
 from argparse import ArgumentParser
 from utils.args import add_management_args
 from datasets import ContinualDataset
-from utils.continual_training import train as ctrain
 from datasets import get_dataset
 from models import get_model
 from utils.training import train
@@ -30,6 +29,8 @@ import setproctitle
 import torch
 import uuid
 import datetime
+
+from utils.testing import load_model,eval100
 
 
 def lecun_fix():
@@ -101,15 +102,12 @@ def main(args=None):
     loss = dataset.get_loss()
     model = get_model(args, backbone, loss, dataset.get_transform())
 
-    # set job name
-    setproctitle.setproctitle(
-        '{}_{}_{}'.format(args.model, args.buffer_size if 'buffer_size' in args else 0, args.dataset))
-
     if isinstance(dataset, ContinualDataset):
         train(model, dataset, args)
 
     # model_path = f"data/saved_model/{args.dataset[4:]}/model.pth.tar"
-    # top5_examples(model, dataset, model_path)
+    # model = load_model(model,args)
+    # eval100(model,args)
 
 
 if __name__ == '__main__':

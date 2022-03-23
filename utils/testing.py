@@ -1,11 +1,15 @@
 from collections import Counter
 
+import numpy.lib.recfunctions
 import torch
+import pickle
 from models.utils.continual_model import ContinualModel
 from datasets import get_dataset
-import numpy as np
-import itertools
+from sklearn import metrics
+from sklearn.neighbors import KNeighborsClassifier
 import time
+import matplotlib.pyplot as plt
+import numpy as np
 
 
 def load_model(model, args):
@@ -22,99 +26,85 @@ def load_model(model, args):
     return model
 
 
+def save_lists(filename, listname):
+    with open(filename, 'wb') as handle:
+        pickle.dump(listname, handle)
+
+
+def load_list(filename):
+    with open(filename, 'rb') as handle:
+        lst = pickle.load(handle)
+    return lst
+
+
 def eval100(model: ContinualModel, args, last=False):
-    labels_lists = [[] for i in range(100)]
+    example_list, label_list = [], []
     model.net.to(model.device)
     model.net.eval()
 
     args.dataset = "seq-cifar100"
     dataset = get_dataset(args)
-    for t in range(dataset.N_TASKS):
-        model.net.train()
-        _, _ = dataset.get_data_loaders()
 
-    # Save for each C100 class the logit head activated
+    # Generate training set couple examples/labels
+    for t in range(dataset.N_TASKS):
+        train_loader, _ = dataset.get_data_loaders()
+        for data in train_loader:
+            with torch.no_grad():
+                inputs, labels, _ = data
+                inputs, labels = inputs.to(model.device), labels.to(model.device)
+                outputs = model(inputs)
+                for x, y in zip(outputs, labels):
+                    example_list.append(x)
+                    label_list.append(y.item())
+        print(f"Task {t} train completed")
+    save_lists('train_examples.pickle', example_list)
+    save_lists('train_labels.pickle', label_list)
+
+    # Generate training set couple examples/labels
+    example_list, label_list = [], []
     for k, test_loader in enumerate(dataset.test_loaders):
-        if last and k < len(dataset.test_loaders) - 1:
-            continue
         for data in test_loader:
             with torch.no_grad():
                 inputs, labels = data
                 inputs, labels = inputs.to(model.device), labels.to(model.device)
                 outputs = model(inputs)
-
-                _, pred = torch.max(outputs.data, 1)
-                for idx, val in enumerate(labels):
-                    labels_lists[val.item()].append(pred[idx].item())
+                for x, y in zip(outputs, labels):
+                    example_list.append(x)
+                    label_list.append(y.item())
         print(f"Task {k} test completed")
 
-    # Create a mapping for each (sub)class the head activated most
-    mapping_dict = {}
-    for index, l in enumerate(labels_lists):
-        c = Counter(l)
-        arg_max = max(c, key=c.get)
-        mapping_dict[index] = arg_max
+    save_lists('test_examples.pickle', example_list)
+    save_lists('test_labels.pickle', label_list)
 
-    # Made another pass on test set with new mapping to compute accuracy
-    correct, total = 0, 0
-    for k, test_loader in enumerate(dataset.test_loaders):
-        if last and k < len(dataset.test_loaders) - 1:
-            continue
-        for data in test_loader:
-            with torch.no_grad():
-                inputs, labels = data
-                inputs, labels = inputs.to(model.device), labels.to(model.device)
-                outputs = model(inputs)
+    x_train = load_list('train_examples.pickle')
+    x_train = [i.cpu().numpy() for i in x_train]
+    x_train = np.vstack(x_train)
+    x_test = load_list('test_examples.pickle')
+    x_test = [i.cpu().numpy() for i in x_test]
+    x_test = np.vstack(x_test)
 
-                _, pred = torch.max(outputs.data, 1)
-                labels = [mapping_dict[l] for l in labels.tolist()]
-                pred = pred.tolist()
-                for x, y in zip(pred, labels):
-                    if x == y:
-                        correct += 1
+    feature_list = [[] for i in range(x_train.shape[1])]
+    for f in range(x_train.shape[1]):
+        feature_list[f] = x_train[:,f]
+    mean_list = [np.mean(feature) for feature in feature_list]
+    std_list = [np.std(feature) for feature in feature_list]
+    for idx,l in enumerate(feature_list):
+        feature_list[idx] = (l-mean_list[idx])/std_list[idx]
+    x_train = np.transpose(np.vstack(feature_list))
 
-                total += len(labels)
+    feature_list = [[] for i in range(x_test.shape[1])]
+    for f in range(x_test.shape[1]):
+        feature_list[f] = x_test[:, f]
+    for idx, l in enumerate(feature_list):
+        feature_list[idx] = (l - mean_list[idx]) / std_list[idx]
+    x_test = np.transpose(np.vstack(feature_list))
 
-    print(f"Accuracy on CIFAR100: {correct / total * 100}")
-    print("Test Completed")
+    y_train = load_list('train_labels.pickle')
+    y_test = load_list('test_labels.pickle')
 
+    knn = KNeighborsClassifier(n_neighbors=64)
+    knn.fit(x_train, y_train)
 
+    y_pred = knn.predict(x_test)
+    print(f"Accuracy: {metrics.accuracy_score(y_test, y_pred)}")
 
-    # TODO Impossible to generate and eval all possible permutations, also on HPC cluster, too much memory required for 100! permutations
-    # TODO Maybe we can eval pemutations in each superclass (5!*20) or on each task (2 superclasses --> 10!*10)
-
-    # start = time.time()
-    # first_list = list(np.arange(100))
-    # permutations = list(itertools.permutations(first_list))
-    #
-    # max_acc = 0
-    # best_perm = []
-    # for n, p in enumerate(permutations):
-    #     correct, total = 0, 0
-    #     for k, test_loader in enumerate(dataset.test_loaders):
-    #         if last and k < len(dataset.test_loaders) - 1:
-    #             continue
-    #         for data in test_loader:
-    #             with torch.no_grad():
-    #                 inputs, labels = data
-    #                 inputs, labels = inputs.to(model.device), labels.to(model.device)
-    #                 outputs = model(inputs)
-    #
-    #                 _, pred = torch.max(outputs.data, 1)
-    #                 labels = [p[l] for l in labels.tolist()]
-    #                 pred = pred.tolist()
-    #                 for x, y in zip(pred, labels):
-    #                     if x == y:
-    #                         correct += 1
-    #
-    #                 total += len(labels)
-    #     acc = correct / total * 100
-    #     if acc > max_acc:
-    #         best_perm = p
-    #         max_acc = acc
-    #     print(f"Permutation {n} completed with accuracy {acc}%")
-    #
-    # print(f"\n\nBest accuracy: {max_acc}%")
-    # end = time.time()
-    # print(f"Elapsed time: {start - end}s")
-    # print("Eval completed")

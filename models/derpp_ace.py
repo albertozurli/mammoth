@@ -36,7 +36,7 @@ class DerppACE(ContinualModel):
         self.num_classes = get_dataset(args).N_TASKS * get_dataset(args).N_CLASSES_PER_TASK
         self.task = 0
         self.cpt = get_dataset(args).N_CLASSES_PER_TASK
-        self.spt = get_dataset(args).N_SUBCLASSES_PER_CLASS
+        self.spc = get_dataset(args).N_SUBCLASSES_PER_CLASS
 
     def end_task(self, dataset):
         self.task += 1
@@ -58,6 +58,7 @@ class DerppACE(ContinualModel):
 
         if self.args.aux:
             auxiliary = aux_loss(output, self.device)
+            auxiliary = aux_loss(output[:, self.task * self.cpt*self.spc:(self.task + 1) * self.cpt*self.spc], self.device)
             loss += (self.args.aux_weight * auxiliary.squeeze())
 
         loss_re = torch.tensor(0.)
@@ -68,7 +69,11 @@ class DerppACE(ContinualModel):
             buf_inputs, buf_labels, _ = self.buffer.get_data(
                 self.args.minibatch_size, transform=self.transform)
             buf_outputs = self.net(buf_inputs)
-            buf_outputs = buf_outputs[:, :(self.task + 1) * self.cpt]
+            if self.args.subclass:
+                buf_outputs = buf_outputs[:, :(self.task + 1) * self.cpt*self.spc]
+                buf_outputs = class_logits_from_subclass_logits(buf_outputs, (self.task + 1) * self.cpt)
+            else:
+                buf_outputs = buf_outputs[:, :(self.task + 1) * self.cpt]
             loss_re = self.args.beta * F.cross_entropy(buf_outputs,buf_labels)
 
             buf_inputs, _, buf_logits = self.buffer.get_data(
