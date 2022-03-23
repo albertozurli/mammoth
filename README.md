@@ -1,14 +1,9 @@
 # Mammoth - An Extendible (General) Continual Learning Framework for Pytorch
 
-## NEWS
-
-**STAY TUNED:** The additional code for the MiniImagenet and NTU-60 experiments will be uploaded soon due to complications in the distribution of datasets.
-
------------------------------
-
-
 Official repository of [Class-Incremental Continual Learning into the eXtended DER-verse](https://arxiv.org/abs/2201.00766) and [Dark Experience for General Continual Learning: a Strong, Simple Baseline](https://papers.nips.cc/paper/2020/hash/b704ea2c39778f07c617f6b7ce480e9e-Abstract.html)
 
+## WARNING
+Ignore `setup.sh` file.
 ## Setup
 
 + Use `./utils/main.py` to run experiments.
@@ -18,70 +13,17 @@ Official repository of [Class-Incremental Continual Learning into the eXtended D
 
 ## Models
 
-+ eXtended-DER (X-DER)
-
++ Experience Replay (ER)
++ ER-ACE
 + Dark Experience Replay (DER)
 + Dark Experience Replay++ (DER++)
-
-+ Learning a Unified Classifier Incrementally via Rebalancing (LUCIR)
-+ Greedy Sampler and Dumb Learner (GDumb)
-+ Bias Correction (BiC)
-+ Regular Polytope Classifier (RPC)
-
-+ Gradient Episodic Memory (GEM)
-+ A-GEM
-+ A-GEM with Reservoir (A-GEM-R)
-+ Experience Replay (ER)
-+ Meta-Experience Replay (MER)
-+ Function Distance Regularization (FDR)
-+ Greedy gradient-based Sample Selection (GSS)
-+ Hindsight Anchor Learning (HAL)
-+ Incremental Classifier and Representation Learning (iCaRL)
-+ online Elastic Weight Consolidation (oEWC)
-+ Synaptic Intelligence
-+ Learning without Forgetting
-+ Progressive Neural Networks
++ DER++-ACE
 
 ## Datasets
 
 **Class-Il / Task-IL settings**
 
-+ Sequential MNIST
 + Sequential CIFAR-10
-+ Sequential Tiny ImageNet
 + Sequential CIFAR-100
++ Sequential CIFAR-20 (CIFAR-100 with superclasses)
 
-**Domain-IL settings**
-
-+ Permuted MNIST
-+ Rotated MNIST
-
-**General Continual Learning setting**
-
-+ MNIST-360
-
-## Citing these works
-
-```
-@article{boschini2022class,
-  title={Class-Incremental Continual Learning into the eXtended DER-verse},
-  author={Boschini, Matteo and Bonicelli, Lorenzo and Buzzega, Pietro and Porrello, Angelo and Calderara, Simone},
-  journal={arXiv preprint arXiv:2201.00766},
-  year={2022}
-}
-
-@inproceedings{buzzega2020dark,
- author = {Buzzega, Pietro and Boschini, Matteo and Porrello, Angelo and Abati, Davide and Calderara, Simone},
- booktitle = {Advances in Neural Information Processing Systems},
- editor = {H. Larochelle and M. Ranzato and R. Hadsell and M. F. Balcan and H. Lin},
- pages = {15920--15930},
- publisher = {Curran Associates, Inc.},
- title = {Dark Experience for General Continual Learning: a Strong, Simple Baseline},
- volume = {33},
- year = {2020}
-}
-```
-
-## Previous versions
-
-If you're interested in a version of this repo that only includes the code for [Dark Experience for General Continual Learning: a Strong, Simple Baseline](https://papers.nips.cc/paper/2020/hash/b704ea2c39778f07c617f6b7ce480e9e-Abstract.html), please use our [neurips2020 tag](https://github.com/aimagelab/mammoth/releases/tag/neurips2020).
